@@ -1,0 +1,58 @@
+/* Write your PL/SQL query statement below */
+/* Write your PL/SQL query statement below */
+
+WITH content_sep_words(content_id, content_text, delim, word, remaining, word_level) AS (
+    SELECT
+        content_id,
+        content_text,
+        '' as delim,
+        case when instr(content_text, ' ', 1) = 0 and instr(content_text, '-', 1) = 0 then content_text
+        when instr(content_text, ' ', 1) <> 0 and instr(content_text, '-', 1) <> 0 and instr(content_text, ' ', 1) < instr(content_text, '-', 1) then SUBSTR(content_text, 1, INSTR(content_text, ' ') - 1)
+        when instr(content_text, ' ', 1) <> 0 and instr(content_text, '-', 1) <> 0 and instr(content_text, '-', 1) < instr(content_text, ' ', 1) then SUBSTR(content_text, 1, INSTR(content_text, '-') - 1)
+        when instr(content_text, ' ', 1) <> 0 and instr(content_text, '-', 1) = 0 then SUBSTR(content_text, 1, INSTR(content_text, ' ') - 1)
+        when instr(content_text, ' ', 1) = 0 and instr(content_text, '-', 1) <> 0 then SUBSTR(content_text, 1, INSTR(content_text, '-') - 1)
+        end AS word,
+        case when instr(content_text, ' ', 1) = 0 and instr(content_text, '-', 1) = 0 then ''
+        when instr(content_text, ' ', 1) <> 0 and instr(content_text, '-', 1) <> 0 and instr(content_text, ' ', 1) < instr(content_text, '-', 1) then SUBSTR(content_text, INSTR(content_text, ' '), 1000)
+        when instr(content_text, ' ', 1) <> 0 and instr(content_text, '-', 1) <> 0 and instr(content_text, '-', 1) < instr(content_text, ' ', 1) then SUBSTR(content_text, INSTR(content_text, '-'), 1000)
+        when instr(content_text, ' ', 1) <> 0 and instr(content_text, '-', 1) = 0 then SUBSTR(content_text, INSTR(content_text, ' '), 1000)
+        when instr(content_text, ' ', 1) = 0 and instr(content_text, '-', 1) <> 0 then SUBSTR(content_text, INSTR(content_text, '-'), 1000)
+        end AS remaining,
+        1 AS word_level
+        from user_content
+    UNION ALL
+    SELECT 
+        content_sep_words.content_id,
+        content_sep_words.content_text,
+        substr(remaining, 1, 1) as delim,
+        case when instr(substr(remaining, 2, 1000), ' ', 1) = 0 and instr(substr(remaining, 2, 1000), '-', 1) = 0 then substr(remaining, 2, 1000)
+        when instr(substr(remaining, 2, 1000), ' ', 1) <> 0 and instr(substr(remaining, 2, 1000), '-', 1) <> 0 and instr(substr(remaining, 2, 1000), ' ', 1) < instr(substr(remaining, 2, 1000), '-', 1) then SUBSTR(substr(remaining, 2, 1000), 1, INSTR(substr(remaining, 2, 1000), ' ') - 1)
+        when instr(substr(remaining, 2, 1000), ' ', 1) <> 0 and instr(substr(remaining, 2, 1000), '-', 1) <> 0 and instr(substr(remaining, 2, 1000), '-', 1) < instr(substr(remaining, 2, 1000), ' ', 1) then SUBSTR(substr(remaining, 2, 1000), 1, INSTR(substr(remaining, 2, 1000), '-') - 1)
+        when instr(substr(remaining, 2, 1000), ' ', 1) <> 0 and instr(substr(remaining, 2, 1000), '-', 1) = 0 then SUBSTR(substr(remaining, 2, 1000), 1, INSTR(substr(remaining, 2, 1000), ' ') - 1)
+        when instr(substr(remaining, 2, 1000), ' ', 1) = 0 and instr(substr(remaining, 2, 1000), '-', 1) <> 0 then SUBSTR(substr(remaining, 2, 1000), 1, INSTR(substr(remaining, 2, 1000), '-') - 1)
+        end AS word,
+        case when instr(substr(remaining, 2, 1000), ' ', 1) = 0 and instr(substr(remaining, 2, 1000), '-', 1) = 0 then ''
+        when instr(substr(remaining, 2, 1000), ' ', 1) <> 0 and instr(substr(remaining, 2, 1000), '-', 1) <> 0 and instr(substr(remaining, 2, 1000), ' ', 1) < instr(substr(remaining, 2, 1000), '-', 1) then SUBSTR(substr(remaining, 2, 1000), INSTR(substr(remaining, 2, 1000), ' '), 1000)
+        when instr(substr(remaining, 2, 1000), ' ', 1) <> 0 and instr(substr(remaining, 2, 1000), '-', 1) <> 0 and instr(substr(remaining, 2, 1000), '-', 1) < instr(substr(remaining, 2, 1000), ' ', 1) then SUBSTR(substr(remaining, 2, 1000), INSTR(substr(remaining, 2, 1000), '-'), 1000)
+        when instr(substr(remaining, 2, 1000), ' ', 1) <> 0 and instr(substr(remaining, 2, 1000), '-', 1) = 0 then SUBSTR(substr(remaining, 2, 1000), INSTR(substr(remaining, 2, 1000), ' '), 1000)
+        when instr(substr(remaining, 2, 1000), ' ', 1) = 0 and instr(substr(remaining, 2, 1000), '-', 1) <> 0 then SUBSTR(substr(remaining, 2, 1000), INSTR(substr(remaining, 2, 1000), '-'), 1000)
+        end AS remaining,
+        word_level + 1
+    FROM content_sep_words
+    WHERE REMAINING is not null
+),
+content_sep_words_capitalized as (
+    select content_id,
+    content_text,
+    word_level as word_seq,
+    word,
+    nvl(delim, '')||upper(substr(WORD, 1, 1))||lower(substr(WORD, 2, 1000)) as formatted_word
+    from content_sep_words
+)
+select
+content_id,
+content_text as original_text,
+LISTAGG(formatted_word, '') WITHIN GROUP (ORDER BY word_seq) as converted_text
+from content_sep_words_capitalized
+group by content_id, content_text
+order by 1
