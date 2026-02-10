@@ -1,0 +1,6 @@
+/* Write your PL/SQL query statement below */
+with cte as(select user_id,action_date,action,row_number() over(partition by user_id,action order by action_date) as rn from activity),
+cte2 as(select user_id,action_date,action,(action_date-rn) as grp from cte),
+cte3 as(select user_id,action,grp,min(action_date) as start_date,max(action_date) as end_date,count(*) as streak_length from cte2 group by user_id,action,grp)
+select user_id,action,streak_length, to_char(start_date,'yyyy-mm-dd') as start_date,
+to_char(end_date,'yyyy-mm-dd') as end_date from cte3 where streak_length>=5 order by streak_length desc,user_id asc
